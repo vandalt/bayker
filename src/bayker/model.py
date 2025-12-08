@@ -66,6 +66,13 @@ class KernelModel(ForwardModel):
     ):
         super().__init__(parameters)
 
+        # HACK: Add arrays to kpo data
+        if not hasattr(kpo, "kp"):
+            kpo.kp = np.array(kpo.KPDT).squeeze()
+        if not hasattr(kpo, "ekp"):
+            kpo.ekp = np.array(kpo.KPSIG).squeeze()
+        if not hasattr(kpo, "x"):
+            kpo.x = np.arange(kpo.kp.shape[-1])
         self.kpo = kpo
         self.share_sigma = share_sigma
         self.model_type = model_type
@@ -114,15 +121,6 @@ class KernelModel(ForwardModel):
             if not isinstance(kpfits, (Path, str)):
                 kpfits = kpfits[0]
             kpo = KPO(kpfits, input_format="KPFITS")
-
-        # TODO: Should this be done in __init__ to always have these attributes?;
-        # HACK: Add arrays to kpo data
-        kp = np.array(kpo.KPDT).squeeze()
-        ekp = np.array(kpo.KPSIG).squeeze()
-        x = np.arange(kp.shape[-1])
-        kpo.kp = kp
-        kpo.ekp = ekp
-        kpo.x = x
 
         model = cls(
             parameters,
