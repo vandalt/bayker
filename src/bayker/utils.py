@@ -40,5 +40,26 @@ def radec2seppa(
 
     return sep, pa
 
+
 def average_kpo(kpo: KPO) -> KPO:
     kpo = kpo.copy()
+    nsets = len(kpo.KPDT)
+    if all([d.shape[0] == 1 for d in kpo.KPDT]):
+        return kpo
+    if len(kpo.KPSIG) > 0:
+        raise ValueError("Average for arrays with uncertainties is not yet supported")
+    kpo.KPSIG = [None] * nsets
+
+    for i in range(nsets):
+        nints = kpo.KPDT[i].shape[0]
+        avg_val = np.expand_dims(np.median(kpo.KPDT[i], axis=0), 0)
+        avg_err = np.sqrt(np.var(kpo.KPDT[i], axis=0) / (nints - 1))
+        kpo.KPDT[i] = avg_val
+        kpo.KPSIG[i] = avg_err
+    return kpo
+
+def calibrate_kpo(kpo_sci: KPO, kpo_cal: KPO) -> KPO:
+    kpo = kpo_sci.copy()
+    kpo.KPDT = list(np.array(kpo_sci.KPDT) - np.array(kpo_cal.KPDT))
+    kpo.KPSIG = list(np.sqrt(np.array(kpo_sci.KPSIG)**2 + np.array(kpo_cal.KPSIG)**2))
+    return kpo

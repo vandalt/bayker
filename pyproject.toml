@@ -20,6 +20,7 @@ dependencies = [
   "numpy",
   "simpple",
   "pyyaml",
+  "matplotlib",
   # TODO: Release xara on PyPI to be able to depend on it
   "xara @ git+https://github.com/fmartinache/xara",
 ]
@@ -33,6 +34,9 @@ docs = [
   "myst-parser",
   "myst-nb",
   "sphinx-book-theme",
+  "corner",
+  "arviz",
+  "ultranest",
 ]
 test = ["pytest"]
 

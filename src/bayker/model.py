@@ -78,7 +78,6 @@ class KernelModel(ForwardModel):
         self.model_type = model_type
         self.pos_param = pos_param
 
-        # TODO: Use the KPO attr directly instead of as arg for likelihood
         expected_params = []
         if self.model_type == "binary":
             expected_params.append("cr")
@@ -90,9 +89,9 @@ class KernelModel(ForwardModel):
                 raise ValueError(
                     f"Unexpected position parameterization {self.pos_param}. Use 'seppa' or 'radec'."
                 )
-            self._forward = forward_binary
+            self._forward = lambda p: forward_binary(p, self.kpo, self.pos_param)
         elif self.model_type == "single":
-            self._forward = forward_single
+            self._forward = lambda p: forward_single(p, self.kpo, self.pos_param)
         else:
             raise ValueError(
                 f"Unexpected model type {self.model_type}. Use 'single' or 'binary'."
@@ -181,15 +180,13 @@ class KernelModel(ForwardModel):
         with open(path, mode="w") as f:
             yaml.dump(model_dict, f)
 
-    def _log_likelihood_split(self, p: dict, kpo: KPO) -> float:
-        s2 = (
-            kpo.ekp**2
-            + np.array([p[f"sigma{i}"] ** 2 for i in range(kpo.kp.shape[0])])[:, None]
-        )
-        kp_mod = self.forward(p, kpo, self.pos_param)
-        return -0.5 * np.sum(np.log(2 * np.pi * s2) + (kp_mod - kpo.kp) ** 2 / s2)
+    def _log_likelihood_split(self, p: dict) -> float:
+        sigma = np.array([p[f"sigma{i}"] ** 2 for i in range(self.kpo.kp.shape[0])])
+        s2 = self.kpo.ekp**2 + sigma[:, None]
+        kp_mod = self.forward(p)
+        return -0.5 * np.sum(np.log(2 * np.pi * s2) + (kp_mod - self.kpo.kp) ** 2 / s2)
 
-    def _log_likelihood_shared(self, p: dict, kpo: KPO) -> float:
-        s2 = kpo.ekp**2 + p["sigma"] ** 2
-        kp_mod = self.forward(p, kpo, self.pos_param)
-        return -0.5 * np.sum(np.log(2 * np.pi * s2) + (kp_mod - kpo.kp) ** 2 / s2)
+    def _log_likelihood_shared(self, p: dict) -> float:
+        s2 = self.kpo.ekp**2 + p["sigma"] ** 2
+        kp_mod = self.forward(p)
+        return -0.5 * np.sum(np.log(2 * np.pi * s2) + (kp_mod - self.kpo.kp) ** 2 / s2)
