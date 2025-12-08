@@ -17,7 +17,11 @@ license = "MIT"
 license-files = ["LICENSE"]
 dynamic = ["version"]
 dependencies = [
+  "numpy",
   "simpple",
+  "pyyaml",
+  # TODO: Release xara on PyPI to be able to depend on it
+  "xara @ git+https://github.com/fmartinache/xara",
 ]
 
 [tool.hatch.version]
@@ -34,6 +38,10 @@ test = ["pytest"]
 
 [tool.hatch.build.hooks.vcs]
 version-file = "src/bayker/_version.py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
 
 [project.urls]
 "Homepage" = "https://bayker.readthedocs.io"
