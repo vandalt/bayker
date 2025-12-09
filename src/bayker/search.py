@@ -17,15 +17,20 @@ def get_colinearity_map(
         raise ValueError("Colinearity maps implemented for a single frame only")
     if dec_bounds is None:
         dec_bounds = ra_bounds
-    pos_grid = {
-        "ra": np.linspace(*ra_bounds, num=npts),
-        "dec": np.linspace(*dec_bounds, num=npts),
-    }
-    colin = np.empty((len(pos_grid["dec"]), len(pos_grid["ra"])))
-    for j, ra in enumerate(pos_grid["ra"]):
-        for i, dec in enumerate(pos_grid["dec"]):
-            kpmod = forward_binary({"cr": cr, "dra": ra, "ddec": dec}, kpo, "radec")
-            colin[i, j] = data.dot(kpmod)
+    pos_grid = (
+        np.linspace(*ra_bounds, num=npts),
+        np.linspace(*dec_bounds, num=npts),
+    )
+    if not vectorized:
+        colin = np.empty((len(pos_grid[1]), len(pos_grid[0])))
+        for j, ra in enumerate(pos_grid[0]):
+            for i, dec in enumerate(pos_grid[1]):
+                kpmod = forward_binary({"cr": cr, "dra": ra, "ddec": dec}, kpo, "radec")
+                colin[i, j] = data.dot(kpmod)
+    else:
+        ra, dec = np.meshgrid(pos_grid[0], pos_grid[1])
+        signal = forward_binary({"cr": cr, "dra": ra, "ddec": dec}, kpo, "radec")
+        colin = data.dot(signal)
     if return_pos:
         return colin, pos_grid
     else:

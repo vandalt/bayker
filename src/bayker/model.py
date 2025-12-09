@@ -45,14 +45,34 @@ def forward_binary(p: dict, kpo: KPO, pos_param: str) -> np.ndarray:
     a2 = cr
     dra_rad = dra * MAS_2_RAD
     ddec_rad = ddec * MAS_2_RAD
-    companion_cvis = a2 * np.exp(-1.0j * 2.0 * np.pi * (uu * dra_rad + vv * ddec_rad))
-    cvis_binary = (a1 + companion_cvis) / (a1 + a2)
 
-    # Normalize primary to 1 and set companion amplitude to cr
+    # Handle both scalar and meshgrid inputs efficiently
+    if np.ndim(dra_rad) == 0:  # Scalar case
+        companion_cvis = a2 * np.exp(
+            -1.0j * 2.0 * np.pi * (uu * dra_rad + vv * ddec_rad)
+        )
+        cvis_binary = (a1 + companion_cvis) / (a1 + a2)
+    else:  # meshgrid case
+        uu = uu[:, np.newaxis, np.newaxis]
+        vv = vv[:, np.newaxis, np.newaxis]
+        companion_cvis = a2 * np.exp(
+            -1.0j * 2.0 * np.pi * (uu * dra_rad + vv * ddec_rad)
+        )
+        cvis_binary = (a1 + companion_cvis) / (a1 + a2)
+        cvis_binary = cvis_binary.swapaxes(0, 1)
     return kpo.kpi.KPM @ np.angle(cvis_binary)
 
 
 class KernelModel(ForwardModel):
+    """Kernel Phase Model
+    `simpple.model.ForwardModel <https://simpple.readthedocs.io/en/stable/api/model.html#simpple.model.ForwardModel>` subclass for RV models.
+
+    :param parameters: Model parameters specified as a dictionary of `simpple.distribution.Distribution <https://simpple.readthedocs.io/en/stable/api/distributions.html>` objects.
+    :param kpo: xara.kpo.KPO object storing the kernel phase data and pupil model information
+    :param model_type: Whether the forward model should be for a binary or a single source
+    :param pos_param: Position parametrization for the binary model ("seppa" or "radec"). Defaults to "seppa".
+    """
+
     kpfits = None
     yaml_file = None
 
@@ -60,7 +80,6 @@ class KernelModel(ForwardModel):
         self,
         parameters: dict[str, Distribution],
         kpo: KPO,
-        share_sigma: bool = False,
         model_type: str = "binary",
         pos_param: str = "seppa",
     ):
@@ -74,9 +93,14 @@ class KernelModel(ForwardModel):
         if not hasattr(kpo, "x"):
             kpo.x = np.arange(kpo.kp.shape[-1])
         self.kpo = kpo
-        self.share_sigma = share_sigma
+        self.share_sigma = True
         self.model_type = model_type
         self.pos_param = pos_param
+
+        if "sigma" in parameters:
+            self.share_sigma = True
+        elif "sigma0" in parameters:
+            self.share_sigma = False
 
         expected_params = []
         if self.model_type == "binary":
@@ -109,10 +133,16 @@ class KernelModel(ForwardModel):
         cls: "KernelModel",
         parameters: dict[str, Distribution],
         kpfits: Path | str | list[Path | str],
-        share_sigma: bool = False,
         model_type: str = "binary",
         pos_param: str = "seppa",
     ) -> "KernelModel":
+        """Build KernelModel from one or more KPFITS.
+
+        :param parameters: Dictionary of parameters as ``simpple`` distributions.
+        :param kpfits: Path to one or more KPFITS file. A xara KPO will be build from the file(s) directly.
+        :param model_type: Model type ("binary" or "single")
+        :param pos_param: Position parametrization ("seppa" or "radec")
+        """
         if not isinstance(kpfits, (Path, str)) and len(kpfits) > 1:
             kpfits = [str(f) for f in kpfits]
             kpo = KPO.from_kpfits_list(kpfits)
@@ -124,7 +154,6 @@ class KernelModel(ForwardModel):
         model = cls(
             parameters,
             kpo,
-            share_sigma=share_sigma,
             model_type=model_type,
             pos_param=pos_param,
         )
