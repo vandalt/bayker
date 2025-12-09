@@ -5,5 +5,5 @@ _version.py
 assets/
 .ipynb_checkpoints/
 docs/tutorials/data/
-./data
+data
 dist/
