@@ -42,6 +42,16 @@ def radec2seppa(
 
 
 def average_kpo(kpo: KPO) -> KPO:
+    """Average kernel phase observations
+
+    For ``kpo.KPDT`` with ``nsets`` datasets with shape ``(nints, nkp)``,
+    each dataset is averaged along the ``nints`` axis.
+    ``kpo.KPSIG`` then stores the standard deviation accross integrations.
+    If ``KPSIG`` is already set, the function throws an error.
+
+    :param kpo: Kernel phase observations object
+    :return: Returns a copy of the kernel phase observations with all integrations averaged
+    """
     kpo = kpo.copy()
     nsets = len(kpo.KPDT)
     if all([d.shape[0] == 1 for d in kpo.KPDT]):
@@ -58,8 +68,17 @@ def average_kpo(kpo: KPO) -> KPO:
         kpo.KPSIG[i] = avg_err
     return kpo
 
+
 def calibrate_kpo(kpo_sci: KPO, kpo_cal: KPO) -> KPO:
+    """Calibrate a science KPO with a reference KPO
+
+    :param kpo_sci: Science KPO object
+    :param kpo_cal: Reference (calibrator) KPO object
+    :return: Returns a copy of ``kpo_sci`` with the calibrated ``KPDT`` and error-propagated ``KPSIG``
+    """
     kpo = kpo_sci.copy()
     kpo.KPDT = list(np.array(kpo_sci.KPDT) - np.array(kpo_cal.KPDT))
-    kpo.KPSIG = list(np.sqrt(np.array(kpo_sci.KPSIG)**2 + np.array(kpo_cal.KPSIG)**2))
+    kpo.KPSIG = list(
+        np.sqrt(np.array(kpo_sci.KPSIG) ** 2 + np.array(kpo_cal.KPSIG) ** 2)
+    )
     return kpo

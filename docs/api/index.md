@@ -4,5 +4,6 @@
 :maxdepth: 2
 
 model
+plot
 utils
 ```

@@ -37,6 +37,7 @@ docs = [
   "corner",
   "arviz",
   "ultranest",
+  "ipywidgets",
 ]
 test = ["pytest"]
 

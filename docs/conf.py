@@ -35,6 +35,7 @@ nb_execution_timeout = -1
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_book_theme"
+html_title = "BayKer"
 html_theme_options = {
     "repository_url": "https://github.com/vandalt/bayker",
     "use_repository_button": True,
