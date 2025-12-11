@@ -21,8 +21,7 @@ dependencies = [
   "simpple",
   "pyyaml",
   "matplotlib",
-  # TODO: Release xara on PyPI to be able to depend on it
-  "xara @ git+https://github.com/fmartinache/xara",
+  "xara-astro",
 ]
 
 [tool.hatch.version]
