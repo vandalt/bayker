@@ -74,6 +74,7 @@ class KernelModel(ForwardModel):
     """
 
     kpfits = None
+    average = False
     yaml_file = None
 
     def __init__(
@@ -82,8 +83,12 @@ class KernelModel(ForwardModel):
         kpo: KPO,
         model_type: str = "binary",
         pos_param: str = "seppa",
+        average: bool = False,
     ):
         super().__init__(parameters)
+
+        if average:
+            kpo = kpo.average(axis="both")
 
         # HACK: Add arrays to kpo data
         if not hasattr(kpo, "kp"):
@@ -96,6 +101,7 @@ class KernelModel(ForwardModel):
         self.share_sigma = True
         self.model_type = model_type
         self.pos_param = pos_param
+        self.average = average
 
         if "sigma" in parameters:
             self.share_sigma = True
@@ -135,6 +141,7 @@ class KernelModel(ForwardModel):
         kpfits: Path | str | list[Path | str],
         model_type: str = "binary",
         pos_param: str = "seppa",
+        average: bool = False,
     ) -> "KernelModel":
         """Build KernelModel from one or more KPFITS.
 
@@ -156,6 +163,7 @@ class KernelModel(ForwardModel):
             kpo,
             model_type=model_type,
             pos_param=pos_param,
+            average=average,
         )
         model.kpfits = kpfits
         return model
@@ -206,6 +214,7 @@ class KernelModel(ForwardModel):
             raise FileExistsError(
                 f"The file {path} already exists. Use overwrite=True to overwrite it."
             )
+        model_dict["kwargs"]["average"] = self.average
         with open(path, mode="w") as f:
             yaml.dump(model_dict, f)
 
