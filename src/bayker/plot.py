@@ -6,6 +6,55 @@ import numpy as np
 from bayker.model import KernelModel
 
 
+def plot_data(
+    x: np.ndarray, kp: np.ndarray, ekp: np.ndarray, fig=None, ax=None, inflated_ekp=None
+):
+    fig = fig or plt.gcf()
+    if ax is None:
+        if len(fig.axes) == 0:
+            ax = plt.gca()
+        else:
+            ax = fig.axes[0]
+    data_kwargs = dict(
+        mfc="w",
+        fmt="k.",
+        capsize=2,
+    )
+    inf_kwargs = dict(
+        ecolor="r",
+        fmt="none",
+        alpha=0.5,
+        capsize=2,
+    )
+    if kp.ndim == 1:
+        ax.errorbar(x, kp, ekp, label="Data", **data_kwargs)
+        if inflated_ekp is not None:
+            ax.errorbar(
+                x,
+                kp,
+                yerr=inflated_ekp,
+                label="Inflated errors",
+                **inf_kwargs,
+            )
+    else:
+        for i in range(kp.shape[0]):
+            ax.errorbar(
+                x,
+                kp[i],
+                ekp[i],
+                label="Data" if i == 0 else None,
+                **data_kwargs,
+            )
+            if inflated_ekp is not None:
+                ax.errorbar(
+                    x,
+                    kp[i],
+                    yerr=inflated_ekp[i],
+                    **inf_kwargs,
+                    label="Inflated errors" if i == 0 else None,
+                )
+
+
 # TODO: Support multi-integration kpfits
 def plot_kernel(
     model: KernelModel,
@@ -13,6 +62,8 @@ def plot_kernel(
     n_samples: int = 100,
     residuals: bool = True,
     include_sigma: bool = False,
+    fig: Figure = None,
+    axs: Axes = None,
 ) -> tuple[Figure, Axes]:
     """Plot the Kernel phase data and model
 
@@ -41,36 +92,27 @@ def plot_kernel(
     include_sigma = include_sigma and "sigma" in parameters
     if include_sigma:
         inflated_ekp = np.sqrt(model.kpo.ekp**2 + parameters_single["sigma"] ** 2)
+    else:
+        inflated_ekp = None
 
-    fig, axs = plt.subplots(
-        1 + residuals, 1, figsize=(12, 4 + 4 * residuals), sharex=True
-    )
+    if fig is None or axs is None:
+        fig, axs = plt.subplots(
+            1 + residuals, 1, figsize=(12, 4 + 4 * residuals), sharex=True
+        )
 
     if residuals:
         axd, axr = axs
     else:
         axs = [axs]
         axd = axs[0]
-    axd.errorbar(
+    plot_data(
         model.kpo.x,
         model.kpo.kp,
-        yerr=model.kpo.ekp,
-        fmt="k.",
-        capsize=2,
-        mfc="w",
-        label="Data",
+        model.kpo.ekp,
+        fig=fig,
+        ax=axd,
+        inflated_ekp=inflated_ekp,
     )
-    if include_sigma:
-        axd.errorbar(
-            model.kpo.x,
-            model.kpo.kp,
-            yerr=inflated_ekp,
-            ecolor="r",
-            fmt="none",
-            alpha=0.5,
-            capsize=2,
-            label="Inflated errors",
-        )
     axd.set_ylabel("Kernel Phase [rad]")
 
     axs[-1].set_xlabel("Kernel Phase Index")
@@ -91,24 +133,14 @@ def plot_kernel(
             )
             if residuals:
                 res = model.kpo.kp - mod_kp
-                axr.errorbar(
+                plot_data(
                     model.kpo.x,
                     res,
-                    yerr=model.kpo.ekp,
-                    fmt="k.",
-                    capsize=2,
-                    mfc="w",
+                    model.kpo.ekp,
+                    inflated_ekp=inflated_ekp,
+                    fig=fig,
+                    ax=axr,
                 )
-                if include_sigma:
-                    axr.errorbar(
-                        model.kpo.x,
-                        res,
-                        yerr=inflated_ekp,
-                        ecolor="r",
-                        fmt="none",
-                        alpha=0.5,
-                        capsize=2,
-                    )
         elif ndim == 2:
             posterior_preds = model.get_posterior_pred(parameters, n_samples)
             for i in range(n_samples):
@@ -121,26 +153,14 @@ def plot_kernel(
                 )
                 if residuals:
                     resi = model.kpo.kp - posterior_preds[i]
-                    axr.errorbar(
+                    plot_data(
                         model.kpo.x,
                         resi,
-                        yerr=model.kpo.ekp,
-                        alpha=0.1,
-                        fmt="k.",
-                        capsize=2,
-                        mfc="w",
-                        label="Data",
+                        model.kpo.ekp,
+                        inflated_ekp=inflated_ekp,
+                        fig=fig,
+                        ax=axr,
                     )
-                    if include_sigma:
-                        axr.errorbar(
-                            model.kpo.x,
-                            resi,
-                            yerr=inflated_ekp,
-                            ecolor="r",
-                            fmt="none",
-                            alpha=0.005,
-                            capsize=2,
-                        )
         else:
             raise ValueError(
                 f"Unexpected dimension {ndim} for parameters. Should be 1 or 2."
